@@ -8,7 +8,7 @@ Inspect file extensions from filenames or path-like strings with explicit polici
 
 `file-extension-inspect-kit` is a small clean-room toolkit for upload forms, import pipelines, asset validators and browser-side developer tools. It is intentionally narrower than a full path parser or MIME detector.
 
-Links: [npm](https://www.npmjs.com/package/file-extension-inspect-kit) · [GitHub](https://github.com/Recoveredd/file-extension-inspect-kit)
+Links: [Demo](https://packages.wasta-wocket.fr/file-extension-inspect-kit/) · [npm](https://www.npmjs.com/package/file-extension-inspect-kit) · [GitHub](https://github.com/Recoveredd/file-extension-inspect-kit)
 
 ## Package Quality
 
