@@ -25,6 +25,24 @@ describe("inspectFileExtension", () => {
     expect(getFileExtension("photo.JPEG", { caseMode: "preserve" })).toBe("JPEG");
   });
 
+  it("trims pasted input by default and can preserve whitespace when requested", () => {
+    expect(inspectFileExtension("  report.PDF  ")).toMatchObject({
+      ok: true,
+      input: "report.PDF",
+      fileName: "report.PDF",
+      extension: "pdf",
+      diagnostics: ["input-trimmed"]
+    });
+
+    expect(inspectFileExtension("  report.PDF  ", { trim: false })).toMatchObject({
+      ok: true,
+      input: "  report.PDF  ",
+      fileName: "  report.PDF  ",
+      extension: "pdf  ",
+      diagnostics: []
+    });
+  });
+
   it("handles path-like strings without Node path APIs", () => {
     expect(inspectFileExtension("C:\\Users\\me\\archive.tar.gz")).toMatchObject({
       ok: true,
@@ -48,6 +66,33 @@ describe("inspectFileExtension", () => {
       effectiveExtension: "tar.gz",
       segments: ["tar", "gz"],
       diagnostics: ["compound-extension-matched"]
+    });
+  });
+
+  it("matches compound extensions case-insensitively while preserving output case", () => {
+    expect(
+      inspectFileExtension("archive.TAR.GZ", {
+        caseMode: "preserve",
+        compoundExtensions: ["tar.gz"]
+      })
+    ).toMatchObject({
+      ok: true,
+      extension: "GZ",
+      compoundExtension: "TAR.GZ",
+      effectiveExtension: "TAR.GZ"
+    });
+
+    expect(
+      inspectFileExtension("archive.TAR.GZ", {
+        caseMode: "preserve",
+        caseSensitive: true,
+        compoundExtensions: ["tar.gz"]
+      })
+    ).toMatchObject({
+      ok: true,
+      extension: "GZ",
+      compoundExtension: "",
+      effectiveExtension: "GZ"
     });
   });
 
@@ -117,6 +162,10 @@ describe("helpers", () => {
         compoundExtensions: ["tar.gz"]
       })
     ).toBe(true);
+    expect(hasFileExtension("avatar.PNG", "png", { caseMode: "preserve" })).toBe(true);
+    expect(hasFileExtension("avatar.PNG", "png", { caseMode: "preserve", caseSensitive: true })).toBe(
+      false
+    );
   });
 });
 

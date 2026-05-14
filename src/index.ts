@@ -5,6 +5,7 @@ export type ExtensionlessPolicy = "empty" | "name";
 export type FileExtensionDiagnostic =
   | "empty-input"
   | "blank-input"
+  | "input-trimmed"
   | "path-ends-with-separator"
   | "dotfile-treated-as-name"
   | "dotfile-treated-as-extension"
@@ -13,6 +14,8 @@ export type FileExtensionDiagnostic =
 
 export interface InspectFileExtensionOptions {
   caseMode?: CaseMode;
+  caseSensitive?: boolean;
+  trim?: boolean;
   dotfile?: DotfilePolicy;
   extensionless?: ExtensionlessPolicy;
   compoundExtensions?: readonly string[];
@@ -53,6 +56,8 @@ export interface FileExtensionInspector {
 
 const DEFAULT_OPTIONS: Required<InspectFileExtensionOptions> = {
   caseMode: "lower",
+  caseSensitive: false,
+  trim: true,
   dotfile: "name",
   extensionless: "empty",
   compoundExtensions: []
@@ -74,7 +79,10 @@ export function inspectFileExtension(
     };
   }
 
-  if (input.length === 0) {
+  const inspectedInput = settings.trim ? input.trim() : input;
+  const diagnostics: FileExtensionDiagnostic[] = [];
+
+  if (inspectedInput.length === 0 && input.length === 0) {
     return {
       ok: false,
       input,
@@ -84,7 +92,7 @@ export function inspectFileExtension(
     };
   }
 
-  if (input.trim().length === 0) {
+  if (inspectedInput.length === 0) {
     return {
       ok: false,
       input,
@@ -94,37 +102,45 @@ export function inspectFileExtension(
     };
   }
 
-  const fileName = lastPathSegment(input);
+  if (inspectedInput !== input) {
+    diagnostics.push("input-trimmed");
+  }
+
+  const fileName = lastPathSegment(inspectedInput);
   if (fileName.length === 0) {
     return {
       ok: false,
-      input,
+      input: inspectedInput,
       code: "path-ends-with-separator",
       message: "The path-like value ends with a separator and has no filename segment.",
-      diagnostics: ["path-ends-with-separator"]
+      diagnostics: [...diagnostics, "path-ends-with-separator"]
     };
   }
 
-  const diagnostics: FileExtensionDiagnostic[] = [];
   const normalizedFileName = normalizeCase(fileName, settings.caseMode);
   const rawSegments = fileName.split(".");
 
   if (fileName.startsWith(".") && rawSegments.length === 2) {
-    return inspectDotfile(input, fileName, settings, diagnostics);
+    return inspectDotfile(inspectedInput, fileName, settings, diagnostics);
   }
 
   if (!fileName.includes(".")) {
     if (settings.extensionless === "name") {
       diagnostics.push("extensionless-treated-as-name");
-      return createInfo(input, fileName, "", normalizeCase(fileName, settings.caseMode), "", diagnostics);
+      return createInfo(inspectedInput, fileName, "", normalizeCase(fileName, settings.caseMode), "", diagnostics);
     }
 
-    return createInfo(input, fileName, fileName, "", "", diagnostics);
+    return createInfo(inspectedInput, fileName, fileName, "", "", diagnostics);
   }
 
   const extension = normalizedFileName.slice(normalizedFileName.lastIndexOf(".") + 1);
   const stem = fileName.slice(0, fileName.lastIndexOf("."));
-  const compoundExtension = findCompoundExtension(fileName, settings.compoundExtensions, settings.caseMode);
+  const compoundExtension = findCompoundExtension(
+    fileName,
+    settings.compoundExtensions,
+    settings.caseMode,
+    settings.caseSensitive
+  );
   const effectiveExtension = compoundExtension || extension;
   const effectiveStem =
     compoundExtension.length > 0 ? fileName.slice(0, fileName.length - compoundExtension.length - 1) : stem;
@@ -135,7 +151,7 @@ export function inspectFileExtension(
 
   return {
     ok: true,
-    input,
+    input: inspectedInput,
     fileName,
     stem,
     effectiveStem,
@@ -179,14 +195,19 @@ export function hasFileExtension(
 
   const settings = normalizeOptions(options);
   const expectedValues = Array.isArray(expected) ? expected : [expected];
-  const normalizedExpected = expectedValues.map((value) => normalizeExpectedExtension(value, settings.caseMode));
+  const normalizedExpected = expectedValues.map((value) =>
+    normalizeExpectedExtension(value, settings.caseSensitive)
+  );
+  const extension = normalizeForComparison(result.extension, settings.caseSensitive);
+  const effectiveExtension = normalizeForComparison(result.effectiveExtension, settings.caseSensitive);
+  const compoundExtension = normalizeForComparison(result.compoundExtension, settings.caseSensitive);
 
   return normalizedExpected.some((value) => {
     if (value.includes(".")) {
-      return result.effectiveExtension === value || result.compoundExtension === value;
+      return effectiveExtension === value || compoundExtension === value;
     }
 
-    return result.extension === value || result.effectiveExtension === value;
+    return extension === value || effectiveExtension === value;
   });
 }
 
@@ -270,8 +291,12 @@ function normalizeCase(value: string, caseMode: CaseMode): string {
   return caseMode === "lower" ? value.toLowerCase() : value;
 }
 
-function normalizeExpectedExtension(value: string, caseMode: CaseMode): string {
-  return normalizeCase(value.trim().replace(/^\./, ""), caseMode);
+function normalizeForComparison(value: string, caseSensitive: boolean): string {
+  return caseSensitive ? value : value.toLowerCase();
+}
+
+function normalizeExpectedExtension(value: string, caseSensitive: boolean): string {
+  return normalizeForComparison(value.trim().replace(/^\./, ""), caseSensitive);
 }
 
 function mergeOptions(
@@ -284,15 +309,19 @@ function mergeOptions(
 function findCompoundExtension(
   fileName: string,
   compoundExtensions: readonly string[],
-  caseMode: CaseMode
+  caseMode: CaseMode,
+  caseSensitive: boolean
 ): string {
-  const normalizedFileName = normalizeCase(fileName, caseMode);
+  const comparableFileName = normalizeForComparison(fileName, caseSensitive);
 
   const matches = compoundExtensions
-    .map((extension) => normalizeCase(extension.replace(/^\./, ""), caseMode))
+    .map((extension) => extension.trim().replace(/^\./, ""))
     .filter((extension) => extension.includes("."))
-    .filter((extension) => normalizedFileName.endsWith(`.${extension}`))
+    .filter((extension) =>
+      comparableFileName.endsWith(`.${normalizeForComparison(extension, caseSensitive)}`)
+    )
     .sort((a, b) => b.length - a.length);
 
-  return matches[0] ?? "";
+  const match = matches[0];
+  return match === undefined ? "" : normalizeCase(fileName.slice(fileName.length - match.length), caseMode);
 }

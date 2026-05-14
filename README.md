@@ -38,6 +38,16 @@ import {
 getFileExtension("archive.tar.gz");
 // "gz"
 
+inspectFileExtension("  report.PDF  ");
+// {
+//   ok: true,
+//   input: "report.PDF",
+//   fileName: "report.PDF",
+//   extension: "pdf",
+//   diagnostics: ["input-trimmed"],
+//   ...
+// }
+
 inspectFileExtension("/uploads/.env", { dotfile: "name" });
 // {
 //   ok: true,
@@ -81,6 +91,8 @@ Filename extension checks are deceptively small. Dotfiles, compound extensions a
 - `.env` can be treated as a name, an extension, or no extension depending on your product.
 - `archive.tar.gz` may need `gz` for a simple check or `tar.gz` for an archive validator.
 - `Makefile` might be extensionless or a known extension-like name.
+- Pasted input often contains harmless surrounding whitespace.
+- UI display may need original casing while validation should still be case-insensitive.
 - UI validation often needs diagnostics, not just an empty string.
 
 This package makes those choices explicit and keeps the result inspectable.
@@ -146,6 +158,17 @@ hasFileExtension("backup.tar.gz", "tar.gz", {
   compoundExtensions: ["tar.gz"]
 });
 // true
+
+hasFileExtension("avatar.PNG", "png", {
+  caseMode: "preserve"
+});
+// true
+
+hasFileExtension("avatar.PNG", "png", {
+  caseMode: "preserve",
+  caseSensitive: true
+});
+// false
 ```
 
 ### `splitFileExtension(input, options?)`
@@ -183,7 +206,9 @@ inspector.split(".env");
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `caseMode` | `"lower"` | Lowercase returned and compared extensions. Use `"preserve"` to keep original casing. |
+| `caseMode` | `"lower"` | Lowercase returned extensions. Use `"preserve"` to keep original casing in returned values. |
+| `caseSensitive` | `false` | Match `compoundExtensions` and `hasFileExtension` values case-insensitively by default. |
+| `trim` | `true` | Trim surrounding whitespace before inspecting the filename. |
 | `dotfile` | `"name"` | How single-segment dotfiles such as `.env` are treated: `"name"`, `"extension"`, or `"empty"`. |
 | `extensionless` | `"empty"` | How names without dots are treated: `"empty"` or `"name"`. |
 | `compoundExtensions` | `[]` | Known compound extensions such as `"tar.gz"` or `"d.ts"`. Leading dots are accepted. |
@@ -194,6 +219,7 @@ Diagnostics are stable strings intended for logs, UI hints or tests:
 
 - `empty-input`
 - `blank-input`
+- `input-trimmed`
 - `path-ends-with-separator`
 - `dotfile-treated-as-name`
 - `dotfile-treated-as-extension`
