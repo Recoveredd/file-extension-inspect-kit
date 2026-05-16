@@ -1,5 +1,6 @@
 # file-extension-inspect-kit
 
+[![npm version](https://img.shields.io/npm/v/file-extension-inspect-kit.svg)](https://www.npmjs.com/package/file-extension-inspect-kit)
 [![License: MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-blue.svg)](LICENSE)
 [![CI](https://github.com/Recoveredd/file-extension-inspect-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/Recoveredd/file-extension-inspect-kit/actions/workflows/ci.yml)
 
@@ -7,7 +8,7 @@ Inspect file extensions from filenames or path-like strings with explicit polici
 
 `file-extension-inspect-kit` is a small clean-room toolkit for upload forms, import pipelines, asset validators and browser-side developer tools. It is intentionally narrower than a full path parser or MIME detector.
 
-Links: [Demo](https://packages.wasta-wocket.fr/file-extension-inspect-kit/) · [GitHub](https://github.com/Recoveredd/file-extension-inspect-kit)
+Links: [Demo](https://packages.wasta-wocket.fr/file-extension-inspect-kit/) · [npm](https://www.npmjs.com/package/file-extension-inspect-kit) · [GitHub](https://github.com/Recoveredd/file-extension-inspect-kit)
 
 ## Package quality
 
@@ -18,11 +19,8 @@ Links: [Demo](https://packages.wasta-wocket.fr/file-extension-inspect-kit/) · [
 - CI runs `npm ci`, `typecheck`, `build`, and `test`.
 - Tested on Node.js 20 and 22 with GitHub Actions.
 
-## Publication status
 
-This package is currently a GitHub preview and is queued for npm publication. The browser demo is available now, and the install command below is the command to use once the npm package is published.
-
-## Install after npm publication
+## Install
 
 ```bash
 npm install file-extension-inspect-kit
